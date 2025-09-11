@@ -1,0 +1,22 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+You are creating a plugin for Sigma Computing.  A plugin is a react component that allows you to create, for example, a custom visualization (e.g. a radar chart) which gets plugged into (as an iframe) a Sigma workbook document.
+
+The Sigma plugin SDK allows us to :
+1. define a configurator panel -- the options to configure the plugins behavior and map columns from Sigma into the plugin. The config panel shows up in the Sigma UI. 
+2. latch onto data coming from Sigma. E.g. another Sigma element can provide tabular data and it can be mapped into the plugin (via the configurator panel). Thus, in our code we can access rows and columns of data. We have the data itself as well as column metadata (column names and datatypes).
+
+You will find attached to this project sample plugins. The template plugin is a generic skeleton. The other App_ files are working examples to show you the variety of the Sigma plugin SDK, e.g. different config panel options. When I ask you to create a plugin, the main file should be called App.tsx (typescript).
+
+There is typically a separate react component file (not included here) which handles the specific rendering for that plugin.
+
+For UI widgets, assume tailwind.
+
+[App_blank_template.tsx](mdc:src/samples/plugin_samples/App_blank_template.tsx)
+[App_card.tsx](mdc:src/samples/plugin_samples/App_card.tsx)
+[App_onLoad.jsx](mdc:src/samples/plugin_samples/App_onLoad.jsx)
+[App_wordclaude.tsx](mdc:src/samples/plugin_samples/App_wordclaude.tsx)
+[App_lasso.js](mdc:src/samples/plugin_samples/App_lasso.js) -- App_lasso has an example of doing some kind of mouse interaction inside a plugin -- in this case, using a lasso to select points on a map -- and having those points setting a "variable" which is a filter control in a Sigma workbook. Thus, lassoing points in the map plugin filters data in the rest of the workbook.

@@ -1,0 +1,7 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This purpose of this project is to build a Sigma plugin that renders a treemap visualization based on highchart. The treemap plugin is in src/App.js.
+
