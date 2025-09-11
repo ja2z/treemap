@@ -614,12 +614,56 @@ function App() {
                   textOutline: "none",
                 },
                 formatter: function() {
+                  // Calculate rectangle area to determine if label should be shown
+                  const shapeArgs = this.point.shapeArgs;
+                  let area = 0;
+                  let shouldHideLabel = false;
+                  
+                  if (shapeArgs && shapeArgs.width && shapeArgs.height) {
+                    area = shapeArgs.width * shapeArgs.height;
+                    
+                    // Calculate intelligent threshold based on font size and text length
+                    const fontSize = parseInt(labelFontSize) || 14; // Default to 14px if parsing fails
+                    const textLength = this.point.name.length;
+                    
+                    // Base threshold for minimum readable area
+                    const baseThreshold = 2500;
+                    
+                    // Font size factor: larger fonts need more space
+                    const fontSizeFactor = Math.pow(fontSize / 14, 1.5); // Exponential scaling for larger fonts
+                    
+                    // Text length factor: longer text needs more space
+                    const textLengthFactor = Math.max(1, textLength / 8); // Scale based on 8 chars as baseline
+                    
+                    // Calculate dynamic threshold
+                    const minAreaThreshold = baseThreshold * fontSizeFactor * textLengthFactor;
+                    
+                    // Debug logging for area calculation
+                    console.log(`🔍 AREA DEBUG: Point "${this.point.name}" - width: ${shapeArgs.width}, height: ${shapeArgs.height}, area: ${area}`);
+                    console.log(`🔍 THRESHOLD DEBUG: fontSize: ${fontSize}, textLength: ${textLength}, fontSizeFactor: ${fontSizeFactor.toFixed(2)}, textLengthFactor: ${textLengthFactor.toFixed(2)}, threshold: ${minAreaThreshold.toFixed(0)}`);
+                    
+                    // Hide label if rectangle is too small
+                    if (area < minAreaThreshold) {
+                      console.log(`🚫 HIDING LABEL: "${this.point.name}" (area: ${area} < threshold: ${minAreaThreshold.toFixed(0)})`);
+                      shouldHideLabel = true;
+                    } else {
+                      console.log(`✅ SHOWING LABEL: "${this.point.name}" (area: ${area} >= threshold: ${minAreaThreshold.toFixed(0)})`);
+                    }
+                  } else {
+                    console.log(`⚠️ WARNING: shapeArgs is undefined for point "${this.point.name}" - showing label by default`);
+                  }
+                  
+                  // Hide label if rectangle is too small
+                  if (shouldHideLabel) {
+                    return '';
+                  }
+                  
                   // Get the background color of this treemap segment
                   // Try multiple ways to get the color since it might be set differently in heatmap vs non-heatmap mode
                   const backgroundColor = this.point.color || this.color || this.series.color || '#FFFFFF';
                   const textColor = getContrastColor(backgroundColor);
                   
-                  console.log(`🔍 DEBUG: Formatter - point: ${this.point.name}, backgroundColor: ${backgroundColor}, textColor: ${textColor}`);
+                  console.log(`🔍 DEBUG: Formatter - point: ${this.point.name}, area: ${area}, backgroundColor: ${backgroundColor}, textColor: ${textColor}`);
                   
                   if (showValues && this.point.value !== undefined) {
                     // Get the measure column ID for formatting
