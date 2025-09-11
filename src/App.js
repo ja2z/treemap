@@ -302,6 +302,7 @@ function App() {
     console.log('🔍 SIMPLE TEST: This should appear in console');
     const dimensions = config.dimension;
     const measures = config.measures;
+    if (!(dimensions && measures)) return false;
 
     if (!sigmaData?.[dimensions[0]]) {
       return null;
