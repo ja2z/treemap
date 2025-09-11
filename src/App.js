@@ -2,8 +2,9 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import addTreemapModule from "highcharts/modules/treemap";
-import { client, useConfig, useElementData } from "@sigmacomputing/plugin";
+import { client, useConfig, useElementData, useElementColumns, useVariable } from "@sigmacomputing/plugin";
 //npm install highcharts highcharts-react-official
+import * as d3 from "d3";
 
 // Helper function to convert HSL to RGB
 function hslToRgb(h, s, l) {
@@ -188,6 +189,26 @@ function formatNumber(num) {
   return num.toLocaleString();
 }
 
+// Helper function to format numbers using Sigma format mask
+function formatNumberWithMask(value, columnInfo, columnId) {
+  if (value == null || isNaN(value)) return '';
+  
+  // Check if column is numeric and has a format specified
+  if (columnInfo && columnInfo[columnId] && 
+      columnInfo[columnId].columnType === 'number' && 
+      typeof value === 'number' && 
+      columnInfo[columnId].format?.format) {
+    try {
+      return d3.format(columnInfo[columnId].format.format)(value);
+    } catch (e) {
+      console.warn(`Failed to apply format ${columnInfo[columnId].format.format} to value ${value}`);
+      return formatNumber(value); // Fallback to default formatting
+    }
+  }
+  
+  return formatNumber(value); // Default formatting
+}
+
 // Helper function to calculate relative luminance of a color
 function getLuminance(hex) {
   const rgb = parseInt(hex.slice(1), 16);
@@ -236,6 +257,7 @@ client.config.configureEditorPanel([
     values: ["Vivid", "Pastels", "Muted", "Bright", "Earth Tones", "Cool", "Warm", "Monochrome", "Highcharts Default"],
     defaultValue: "Highcharts Default"
   },
+  { name: "tileClickControl", type: "variable" },
 ]);
 
 addTreemapModule(Highcharts);
@@ -244,12 +266,24 @@ function App() {
   console.log('🚀 App component rendering');
   const config = useConfig();
   const sigmaData = useElementData(config.source);
+  const columnInfo = useElementColumns(config.source);
   const ref = useRef();
   const enableHeatmap = client.config.getKey("enableHeatmap");
   const showValues = client.config.getKey("showValues");
   const labelFontSize = client.config.getKey("labelFontSize");
   const valueFontSize = client.config.getKey("valueFontSize");
   const colorPalette = client.config.getKey("colorPalette");
+  const [, setTileClickControlVar] = useVariable(config.tileClickControl); // Only setter, do not read value
+  
+  // Handle tile click to set control variable
+  const handleTileClick = (tileName) => {
+    console.log('🖱️ Tile clicked:', tileName);
+    if (config.tileClickControl) {
+      console.log('🖱️ Setting control variable to:', tileName);
+      setTileClickControlVar(tileName);
+      console.log('Tile clicked, setting control variable:', tileName);
+    }
+  };
   
   // Use localStorage to persist drill state across any component re-mounting
   const getInitialDrillState = () => {
@@ -284,6 +318,9 @@ function App() {
   };
   
   console.log('📱 Current drillState:', drillState);
+  
+  // Check if tile click control is configured
+  const hasTileClickControl = !!config.tileClickControl;
   
   // Track when enableHeatmap changes
   useEffect(() => {
@@ -552,6 +589,13 @@ function App() {
             animation: false
         }
       },
+      tooltip: {
+        formatter: function() {
+          const measureColumnId = measures[this.point.level] || measures[0];
+          const formattedValue = formatNumberWithMask(this.point.value, columnInfo, measureColumnId);
+          return `<b>${this.point.name}</b><br/>Value: ${formattedValue}`;
+        }
+      },
       series: [
         {
           levels: [
@@ -578,7 +622,10 @@ function App() {
                   console.log(`🔍 DEBUG: Formatter - point: ${this.point.name}, backgroundColor: ${backgroundColor}, textColor: ${textColor}`);
                   
                   if (showValues && this.point.value !== undefined) {
-                    return `<span style="font-size: ${labelFontSize}; font-weight: bold; color: ${textColor};">${this.point.name}</span><br/><span style="font-size: ${valueFontSize}; font-weight: normal; color: ${textColor};">${formatNumber(this.point.value)}</span>`;
+                    // Get the measure column ID for formatting
+                    const measureColumnId = measures[this.point.level] || measures[0];
+                    const formattedValue = formatNumberWithMask(this.point.value, columnInfo, measureColumnId);
+                    return `<span style="font-size: ${labelFontSize}; font-weight: bold; color: ${textColor};">${this.point.name}</span><br/><span style="font-size: ${valueFontSize}; font-weight: normal; color: ${textColor};">${formattedValue}</span>`;
                   }
                   return `<span style="color: ${textColor};">${this.point.name}</span>`;
                 },
@@ -598,6 +645,7 @@ function App() {
                 const point = this;
                 const currentLevel = drillState.currentLevel;
                 const drillPath = drillState.drillPath;
+                let canDrill = false;
                 
                 if (dimensions.length === 3) {
                   if (currentLevel === 0) {
@@ -607,6 +655,7 @@ function App() {
                         currentLevel: 1,
                         drillPath: [point.name]
                       });
+                      canDrill = true;
                     }
                     // Clicking on a state in initial view drills to show that state's cities
                     else if (point.level === 1) {
@@ -618,6 +667,7 @@ function App() {
                           currentLevel: 2,
                           drillPath: [region, point.name]
                         });
+                        canDrill = true;
                       }
                     }
                   } else if (currentLevel === 1) {
@@ -627,8 +677,23 @@ function App() {
                         currentLevel: 2,
                         drillPath: [drillPath[0], point.name]
                       });
+                      canDrill = true;
                     }
                   }
+                } else if (dimensions.length === 2) {
+                  // For 2-level hierarchy, can drill from first level to second
+                  if (point.level === 0) {
+                    canDrill = true;
+                    // Add drill functionality for 2-level if needed
+                  }
+                } else if (dimensions.length === 1) {
+                  // Single level - no drilling possible
+                  canDrill = false;
+                }
+                
+                // If drilling is not possible and a control is configured, set the control value
+                if (!canDrill && hasTileClickControl) {
+                  handleTileClick(point.name);
                 }
               }
             }
@@ -637,7 +702,7 @@ function App() {
       ],
     };
     return options;
-  }, [config, sigmaData, enableHeatmap, showValues, labelFontSize, valueFontSize, colorPalette, drillState]);
+  }, [config, sigmaData, enableHeatmap, showValues, labelFontSize, valueFontSize, colorPalette, drillState, hasTileClickControl, handleTileClick]);
 
   // Function to handle drill back
   const handleDrillBack = () => {
@@ -684,3 +749,4 @@ function App() {
 }
 
 export default App;
+
