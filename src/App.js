@@ -152,7 +152,7 @@ function hexToHsl(hex) {
 }
 
 // Helper function to get region base colors using selected color palette
-function getRegionBaseColor(regionName, allRegions = [], colorPalette = 'Highcharts Default') {
+function getRegionBaseColor(regionName, allRegions = [], colorPalette = 'Highcharts Default', enableDebugLogging = false) {
   let colorIndex;
   if (allRegions.length > 0) {
     colorIndex = getColorIndexByOrder(allRegions, regionName, colorPalette);
@@ -162,17 +162,17 @@ function getRegionBaseColor(regionName, allRegions = [], colorPalette = 'Highcha
   const colors = COLOR_PALETTES[colorPalette] || HIGHCHARTS_DEFAULT_COLORS;
   const hexColor = colors[colorIndex];
   const hslColor = hexToHsl(hexColor);
-  console.log(`🔍 getRegionBaseColor("${regionName}") -> index: ${colorIndex}, hex: ${hexColor}, hsl: [${hslColor.join(', ')}]`);
+  debugLog(enableDebugLogging, `🔍 getRegionBaseColor("${regionName}") -> index: ${colorIndex}, hex: ${hexColor}, hsl: [${hslColor.join(', ')}]`);
   return hslColor;
 }
 
 // Helper function to get state base colors using selected color palette
-function getStateBaseColor(stateName, colorPalette = 'Highcharts Default') {
+function getStateBaseColor(stateName, colorPalette = 'Highcharts Default', enableDebugLogging = false) {
   const colorIndex = getColorIndex(stateName, colorPalette);
   const colors = COLOR_PALETTES[colorPalette] || HIGHCHARTS_DEFAULT_COLORS;
   const hexColor = colors[colorIndex];
   const hslColor = hexToHsl(hexColor);
-  console.log(`🔍 getStateBaseColor("${stateName}") -> index: ${colorIndex}, hex: ${hexColor}, hsl: [${hslColor.join(', ')}]`);
+  debugLog(enableDebugLogging, `🔍 getStateBaseColor("${stateName}") -> index: ${colorIndex}, hex: ${hexColor}, hsl: [${hslColor.join(', ')}]`);
   return hslColor;
 }
 
@@ -231,6 +231,13 @@ function getContrastColor(backgroundColor) {
   return luminance > 0.5 ? '#000000' : '#FFFFFF';
 }
 
+// Helper function for conditional debug logging
+function debugLog(enableDebugLogging, ...args) {
+  if (enableDebugLogging) {
+    console.log(...args);
+  }
+}
+
 
 
 client.config.configureEditorPanel([
@@ -239,6 +246,7 @@ client.config.configureEditorPanel([
   { name: "measures", type: "column", source: "source", allowMultiple: true },
   { name: "enableHeatmap", type: "checkbox", defaultValue: true },
   { name: "showValues", type: "checkbox", defaultValue: false },
+  { name: "enableDebugLogging", type: "checkbox", defaultValue: false },
   {
     name: "labelFontSize",
     type: "dropdown",
@@ -269,13 +277,14 @@ client.config.configureEditorPanel([
 addTreemapModule(Highcharts);
 
 function App() {
-  console.log('🚀 App component rendering');
   const config = useConfig();
   const sigmaData = useElementData(config.source);
   const columnInfo = useElementColumns(config.source);
   const ref = useRef();
   const enableHeatmap = client.config.getKey("enableHeatmap");
   const showValues = client.config.getKey("showValues");
+  const enableDebugLogging = client.config.getKey("enableDebugLogging");
+  debugLog(enableDebugLogging, '🚀 App component rendering');
   const labelFontSize = client.config.getKey("labelFontSize");
   const valueFontSize = client.config.getKey("valueFontSize");
   const colorPalette = client.config.getKey("colorPalette");
@@ -284,11 +293,11 @@ function App() {
   
   // Handle tile click to set control variable
   const handleTileClick = (tileName) => {
-    console.log('🖱️ Tile clicked:', tileName);
+    debugLog(enableDebugLogging, '🖱️ Tile clicked:', tileName);
     if (config.tileClickControl) {
-      console.log('🖱️ Setting control variable to:', tileName);
+      debugLog(enableDebugLogging, '🖱️ Setting control variable to:', tileName);
       setTileClickControlVar(tileName);
-      console.log('Tile clicked, setting control variable:', tileName);
+      debugLog(enableDebugLogging, 'Tile clicked, setting control variable:', tileName);
     }
   };
   
@@ -298,7 +307,7 @@ function App() {
       const saved = localStorage.getItem('treemap-drill-state');
       if (saved) {
         const parsed = JSON.parse(saved);
-        console.log('🔄 Restored drill state from localStorage:', parsed);
+        debugLog(enableDebugLogging, '🔄 Restored drill state from localStorage:', parsed);
         return parsed;
       }
     } catch (e) {
@@ -314,24 +323,24 @@ function App() {
   
   // Wrapper function to update drill state and persist to localStorage
   const setDrillStateWithLogging = (newState) => {
-    console.log('🔧 setDrillState called with:', newState, 'from:', new Error().stack);
+    debugLog(enableDebugLogging, '🔧 setDrillState called with:', newState, 'from:', new Error().stack);
     setDrillState(newState);
     try {
       localStorage.setItem('treemap-drill-state', JSON.stringify(newState));
-      console.log('💾 Saved drill state to localStorage:', newState);
+      debugLog(enableDebugLogging, '💾 Saved drill state to localStorage:', newState);
     } catch (e) {
       console.warn('Failed to save drill state to localStorage:', e);
     }
   };
   
-  console.log('📱 Current drillState:', drillState);
+  debugLog(enableDebugLogging, '📱 Current drillState:', drillState);
   
   // Check if tile click control is configured
   const hasTileClickControl = !!config.tileClickControl;
   
   // Track when enableHeatmap changes
   useEffect(() => {
-    console.log('⚡ enableHeatmap changed to:', enableHeatmap, 'drillState at time of change:', drillState);
+    debugLog(enableDebugLogging, '⚡ enableHeatmap changed to:', enableHeatmap, 'drillState at time of change:', drillState);
   }, [enableHeatmap]);
   
   // Optional: Clear localStorage on component unmount (uncomment if needed)
@@ -342,8 +351,8 @@ function App() {
   // }, []);
   
   const options = useMemo(() => {
-    console.log('🔄 useMemo recalculating - enableHeatmap:', enableHeatmap, 'drillState:', drillState);
-    console.log('🔍 SIMPLE TEST: This should appear in console');
+    debugLog(enableDebugLogging, '🔄 useMemo recalculating - enableHeatmap:', enableHeatmap, 'drillState:', drillState);
+    debugLog(enableDebugLogging, '🔍 SIMPLE TEST: This should appear in console');
     const dimensions = config.dimension;
     const measures = config.measures;
     if (!(dimensions && measures)) return false;
@@ -399,7 +408,7 @@ function App() {
     const currentLevel = drillState.currentLevel;
     const drillPath = drillState.drillPath;
     
-    console.log('📊 Filtering data - Level:', currentLevel, 'Path:', drillPath);
+    debugLog(enableDebugLogging, '📊 Filtering data - Level:', currentLevel, 'Path:', drillPath);
     
     if (dimensions.length === 3) {
       if (currentLevel === 0) {
@@ -450,24 +459,28 @@ function App() {
       });
     }
     
-    console.log('✅ Final filtered data count:', Object.keys(filteredData).length);
+    debugLog(enableDebugLogging, '✅ Final filtered data count:', Object.keys(filteredData).length);
     
     // Generate heatmap colors based on current drill state
     const shouldUseHeatmap = enableHeatmap && (dimensions.length === 1 || dimensions.length === 3);
-    console.log('🎨 Heatmap settings - enableHeatmap:', enableHeatmap, 'shouldUseHeatmap:', shouldUseHeatmap);
+    debugLog(enableDebugLogging, '🎨 Heatmap settings - enableHeatmap:', enableHeatmap, 'shouldUseHeatmap:', shouldUseHeatmap);
     let heatmapColors = {};
     
     // Log what colors would be used when heatmap is off (Highcharts colorByPoint)
     if (!shouldUseHeatmap) {
-      console.log('🔍 DEBUG: Heatmap OFF - Highcharts will assign colors via colorByPoint');
-      console.log('🔍 DEBUG: Highcharts default colors:', HIGHCHARTS_DEFAULT_COLORS);
+      debugLog(enableDebugLogging, '🔍 DEBUG: Heatmap OFF - Highcharts will assign colors via colorByPoint');
+      debugLog(enableDebugLogging, '🔍 DEBUG: Highcharts default colors:', HIGHCHARTS_DEFAULT_COLORS);
     }
     
     if (shouldUseHeatmap) {
       if (dimensions.length === 1) {
-        // Single level: use red as base color
+        // Single level: use first color from selected palette as base
         const levelValues = Object.values(filteredData).map(point => point.value);
-        heatmapColors = generateHeatmapColors(levelValues, [0, 100, 50]);
+        const colors = COLOR_PALETTES[colorPalette] || HIGHCHARTS_DEFAULT_COLORS;
+        const baseColorHex = colors[0]; // Use first color from palette
+        const baseColorHsl = hexToHsl(baseColorHex);
+        debugLog(enableDebugLogging, `🔍 DEBUG: Single level heatmap - using base color: ${baseColorHex} -> HSL: [${baseColorHsl.join(', ')}]`);
+        heatmapColors = generateHeatmapColors(levelValues, baseColorHsl);
       } else if (dimensions.length === 3) {
         const currentLevel = drillState.currentLevel;
         
@@ -490,11 +503,11 @@ function App() {
           // Generate heatmap colors for each region
           const allRegions = Object.keys(regionGroups);
           Object.keys(regionGroups).forEach(region => {
-            const regionBaseColor = getRegionBaseColor(region, allRegions, colorPalette);
+            const regionBaseColor = getRegionBaseColor(region, allRegions, colorPalette, enableDebugLogging);
             const regionHeatmapColors = generateHeatmapColors(regionGroups[region], regionBaseColor);
             
-            console.log(`🔍 DEBUG: Region "${region}" base color:`, regionBaseColor);
-            console.log(`🔍 DEBUG: Region "${region}" heatmap colors:`, regionHeatmapColors);
+            debugLog(enableDebugLogging, `🔍 DEBUG: Region "${region}" base color:`, regionBaseColor);
+            debugLog(enableDebugLogging, `🔍 DEBUG: Region "${region}" heatmap colors:`, regionHeatmapColors);
             
             // Add region prefix to avoid conflicts
             Object.keys(regionHeatmapColors).forEach(value => {
@@ -519,7 +532,7 @@ function App() {
           
           // Generate heatmap colors for each state
           Object.keys(stateGroups).forEach(state => {
-            const stateBaseColor = getStateBaseColor(state, colorPalette);
+            const stateBaseColor = getStateBaseColor(state, colorPalette, enableDebugLogging);
             const stateHeatmapColors = generateHeatmapColors(stateGroups[state], stateBaseColor);
             
             // Add state prefix to avoid conflicts
@@ -530,7 +543,7 @@ function App() {
         } else if (currentLevel === 2) {
           // State view: color by state for cities
           const selectedState = drillState.drillPath[1];
-          const stateBaseColor = getStateBaseColor(selectedState, colorPalette);
+          const stateBaseColor = getStateBaseColor(selectedState, colorPalette, enableDebugLogging);
           const levelValues = Object.values(filteredData).map(point => point.value);
           heatmapColors = generateHeatmapColors(levelValues, stateBaseColor);
         }
@@ -570,7 +583,7 @@ function App() {
         if (dimensions.length === 1) {
           // Single level: use value directly
           dataPoint.color = heatmapColors[dataPoint.value];
-          console.log(`🔍 DEBUG: Single level - ${dataPoint.name}: ${dataPoint.color}`);
+          debugLog(enableDebugLogging, `🔍 DEBUG: Single level - ${dataPoint.name}: ${dataPoint.color}`);
         } else if (dimensions.length === 3) {
           const currentLevel = drillState.currentLevel;
           
@@ -581,7 +594,7 @@ function App() {
                 const region = idParts[1]; // Region is the second part of the ID
                 const colorKey = `${region}__${dataPoint.value}`;
                 dataPoint.color = heatmapColors[colorKey];
-                console.log(`🔍 DEBUG: Level 0 - ${dataPoint.name} (value: ${dataPoint.value}, colorKey: ${colorKey}) -> ${dataPoint.color}`);
+                debugLog(enableDebugLogging, `🔍 DEBUG: Level 0 - ${dataPoint.name} (value: ${dataPoint.value}, colorKey: ${colorKey}) -> ${dataPoint.color}`);
               }
           } else if (currentLevel === 1) {
             // Region view: use state + value combination
@@ -590,12 +603,12 @@ function App() {
               const state = idParts[3]; // State is the fourth part of the ID
               const colorKey = `${state}__${dataPoint.value}`;
               dataPoint.color = heatmapColors[colorKey];
-              console.log(`🔍 DEBUG: Level 1 - ${dataPoint.name} (value: ${dataPoint.value}, colorKey: ${colorKey}) -> ${dataPoint.color}`);
+              debugLog(enableDebugLogging, `🔍 DEBUG: Level 1 - ${dataPoint.name} (value: ${dataPoint.value}, colorKey: ${colorKey}) -> ${dataPoint.color}`);
             }
           } else {
             // State view: use value directly
             dataPoint.color = heatmapColors[dataPoint.value];
-            console.log(`🔍 DEBUG: Level 2 - ${dataPoint.name} (value: ${dataPoint.value}) -> ${dataPoint.color}`);
+            debugLog(enableDebugLogging, `🔍 DEBUG: Level 2 - ${dataPoint.name} (value: ${dataPoint.value}) -> ${dataPoint.color}`);
           }
         }
       }
@@ -673,18 +686,18 @@ function App() {
                     const minAreaThreshold = baseThreshold * fontSizeFactor * textLengthFactor;
                     
                     // Debug logging for area calculation
-                    console.log(`🔍 AREA DEBUG: Point "${this.point.name}" - width: ${shapeArgs.width}, height: ${shapeArgs.height}, area: ${area}`);
-                    console.log(`🔍 THRESHOLD DEBUG: fontSize: ${fontSize}, textLength: ${textLength}, fontSizeFactor: ${fontSizeFactor.toFixed(2)}, textLengthFactor: ${textLengthFactor.toFixed(2)}, threshold: ${minAreaThreshold.toFixed(0)}`);
+                    debugLog(enableDebugLogging, `🔍 AREA DEBUG: Point "${this.point.name}" - width: ${shapeArgs.width}, height: ${shapeArgs.height}, area: ${area}`);
+                    debugLog(enableDebugLogging, `🔍 THRESHOLD DEBUG: fontSize: ${fontSize}, textLength: ${textLength}, fontSizeFactor: ${fontSizeFactor.toFixed(2)}, textLengthFactor: ${textLengthFactor.toFixed(2)}, threshold: ${minAreaThreshold.toFixed(0)}`);
                     
                     // Hide label if rectangle is too small
                     if (area < minAreaThreshold) {
-                      console.log(`🚫 HIDING LABEL: "${this.point.name}" (area: ${area} < threshold: ${minAreaThreshold.toFixed(0)})`);
+                      debugLog(enableDebugLogging, `🚫 HIDING LABEL: "${this.point.name}" (area: ${area} < threshold: ${minAreaThreshold.toFixed(0)})`);
                       shouldHideLabel = true;
                     } else {
-                      console.log(`✅ SHOWING LABEL: "${this.point.name}" (area: ${area} >= threshold: ${minAreaThreshold.toFixed(0)})`);
+                      debugLog(enableDebugLogging, `✅ SHOWING LABEL: "${this.point.name}" (area: ${area} >= threshold: ${minAreaThreshold.toFixed(0)})`);
                     }
                   } else {
-                    console.log(`⚠️ WARNING: shapeArgs is undefined for point "${this.point.name}" - showing label by default`);
+                    debugLog(enableDebugLogging, `⚠️ WARNING: shapeArgs is undefined for point "${this.point.name}" - showing label by default`);
                   }
                   
                   // Hide label if rectangle is too small
@@ -697,7 +710,7 @@ function App() {
                   const backgroundColor = this.point.color || this.color || this.series.color || '#FFFFFF';
                   const textColor = getContrastColor(backgroundColor);
                   
-                  console.log(`🔍 DEBUG: Formatter - point: ${this.point.name}, area: ${area}, backgroundColor: ${backgroundColor}, textColor: ${textColor}`);
+                  debugLog(enableDebugLogging, `🔍 DEBUG: Formatter - point: ${this.point.name}, area: ${area}, backgroundColor: ${backgroundColor}, textColor: ${textColor}`);
                   
                   if (showValues && this.point.value !== undefined) {
                     // Get the measure column ID for formatting
@@ -789,7 +802,7 @@ function App() {
       ],
     };
     return options;
-  }, [config, sigmaData, enableHeatmap, showValues, labelFontSize, valueFontSize, colorPalette, labelStyle, drillState, hasTileClickControl, handleTileClick]);
+  }, [config, sigmaData, enableHeatmap, showValues, enableDebugLogging, labelFontSize, valueFontSize, colorPalette, labelStyle, drillState, hasTileClickControl, handleTileClick]);
 
   // Function to handle drill back
   const handleDrillBack = () => {
