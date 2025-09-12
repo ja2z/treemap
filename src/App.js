@@ -257,6 +257,12 @@ client.config.configureEditorPanel([
     values: ["Vivid", "Pastels", "Muted", "Bright", "Earth Tones", "Cool", "Warm", "Monochrome", "Highcharts Default"],
     defaultValue: "Highcharts Default"
   },
+  {
+    name: "labelStyle",
+    type: "dropdown",
+    values: ["value", "percent"],
+    defaultValue: "value"
+  },
   { name: "tileClickControl", type: "variable" },
 ]);
 
@@ -273,6 +279,7 @@ function App() {
   const labelFontSize = client.config.getKey("labelFontSize");
   const valueFontSize = client.config.getKey("valueFontSize");
   const colorPalette = client.config.getKey("colorPalette");
+  const labelStyle = client.config.getKey("labelStyle");
   const [, setTileClickControlVar] = useVariable(config.tileClickControl); // Only setter, do not read value
   
   // Handle tile click to set control variable
@@ -530,6 +537,28 @@ function App() {
       }
     }
     
+    // Calculate percentages for each level if labelStyle is 'percent'
+    if (labelStyle === 'percent') {
+      // Group data by level to calculate percentages within each level
+      const levelGroups = {};
+      Object.values(filteredData).forEach(point => {
+        if (!levelGroups[point.level]) {
+          levelGroups[point.level] = [];
+        }
+        levelGroups[point.level].push(point);
+      });
+      
+      // Calculate total for each level and assign percentages
+      Object.keys(levelGroups).forEach(level => {
+        const levelData = levelGroups[level];
+        const total = levelData.reduce((sum, point) => sum + (point.value || 0), 0);
+        
+        levelData.forEach(point => {
+          point.percentage = total > 0 ? (point.value / total) * 100 : 0;
+        });
+      });
+    }
+
     // Convert filtered data to array and apply colors
     let data = [];
     let i = 0;
@@ -593,7 +622,12 @@ function App() {
         formatter: function() {
           const measureColumnId = measures[this.point.level] || measures[0];
           const formattedValue = formatNumberWithMask(this.point.value, columnInfo, measureColumnId);
-          return `<b>${this.point.name}</b><br/>Value: ${formattedValue}`;
+          
+          if (labelStyle === 'percent' && this.point.percentage !== undefined) {
+            return `<b>${this.point.name}</b><br/>Value: ${formattedValue}<br/>Percentage: ${this.point.percentage.toFixed(1)}%`;
+          } else {
+            return `<b>${this.point.name}</b><br/>Value: ${formattedValue}`;
+          }
         }
       },
       series: [
@@ -668,8 +702,17 @@ function App() {
                   if (showValues && this.point.value !== undefined) {
                     // Get the measure column ID for formatting
                     const measureColumnId = measures[this.point.level] || measures[0];
-                    const formattedValue = formatNumberWithMask(this.point.value, columnInfo, measureColumnId);
-                    return `<span style="font-size: ${labelFontSize}; font-weight: bold; color: ${textColor};">${this.point.name}</span><br/><span style="font-size: ${valueFontSize}; font-weight: normal; color: ${textColor};">${formattedValue}</span>`;
+                    let displayValue;
+                    
+                    if (labelStyle === 'percent' && this.point.percentage !== undefined) {
+                      // Show percentage with 1 decimal place
+                      displayValue = `${this.point.percentage.toFixed(1)}%`;
+                    } else {
+                      // Show formatted numeric value
+                      displayValue = formatNumberWithMask(this.point.value, columnInfo, measureColumnId);
+                    }
+                    
+                    return `<span style="font-size: ${labelFontSize}; font-weight: bold; color: ${textColor};">${this.point.name}</span><br/><span style="font-size: ${valueFontSize}; font-weight: normal; color: ${textColor};">${displayValue}</span>`;
                   }
                   return `<span style="color: ${textColor};">${this.point.name}</span>`;
                 },
@@ -746,7 +789,7 @@ function App() {
       ],
     };
     return options;
-  }, [config, sigmaData, enableHeatmap, showValues, labelFontSize, valueFontSize, colorPalette, drillState, hasTileClickControl, handleTileClick]);
+  }, [config, sigmaData, enableHeatmap, showValues, labelFontSize, valueFontSize, colorPalette, labelStyle, drillState, hasTileClickControl, handleTileClick]);
 
   // Function to handle drill back
   const handleDrillBack = () => {
