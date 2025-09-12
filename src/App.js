@@ -225,10 +225,19 @@ function getLuminance(hex) {
 }
 
 // Helper function to get contrasting text color (black or white)
-function getContrastColor(backgroundColor) {
+function getContrastColor(backgroundColor, enableDebugLogging = false) {
+  if (!backgroundColor || backgroundColor === '#FFFFFF') {
+    debugLog(enableDebugLogging, `⚠️ WARNING: Invalid background color for contrast calculation: ${backgroundColor}`);
+    return '#000000'; // Default to black text
+  }
+  
   const luminance = getLuminance(backgroundColor);
+  const textColor = luminance > 0.5 ? '#000000' : '#FFFFFF';
+  
+  debugLog(enableDebugLogging, `🔍 Contrast calculation: backgroundColor=${backgroundColor}, luminance=${luminance.toFixed(3)}, textColor=${textColor}`);
+  
   // If luminance is high (light background), use dark text; if low (dark background), use light text
-  return luminance > 0.5 ? '#000000' : '#FFFFFF';
+  return textColor;
 }
 
 // Helper function for conditional debug logging
@@ -587,15 +596,15 @@ function App() {
         } else if (dimensions.length === 3) {
           const currentLevel = drillState.currentLevel;
           
-            if (currentLevel === 0) {
-              // Initial view: use region + value combination
-              const idParts = dataPoint.id.split(delim);
-              if (idParts.length >= 2) {
-                const region = idParts[1]; // Region is the second part of the ID
-                const colorKey = `${region}__${dataPoint.value}`;
-                dataPoint.color = heatmapColors[colorKey];
-                debugLog(enableDebugLogging, `🔍 DEBUG: Level 0 - ${dataPoint.name} (value: ${dataPoint.value}, colorKey: ${colorKey}) -> ${dataPoint.color}`);
-              }
+          if (currentLevel === 0) {
+            // Initial view: use region + value combination
+            const idParts = dataPoint.id.split(delim);
+            if (idParts.length >= 2) {
+              const region = idParts[1]; // Region is the second part of the ID
+              const colorKey = `${region}__${dataPoint.value}`;
+              dataPoint.color = heatmapColors[colorKey];
+              debugLog(enableDebugLogging, `🔍 DEBUG: Level 0 - ${dataPoint.name} (value: ${dataPoint.value}, colorKey: ${colorKey}) -> ${dataPoint.color}`);
+            }
           } else if (currentLevel === 1) {
             // Region view: use state + value combination
             const idParts = dataPoint.id.split(delim);
@@ -611,6 +620,18 @@ function App() {
             debugLog(enableDebugLogging, `🔍 DEBUG: Level 2 - ${dataPoint.name} (value: ${dataPoint.value}) -> ${dataPoint.color}`);
           }
         }
+      }
+      
+      // Fallback: if no heatmap color was assigned, use Highcharts default color
+      if (!dataPoint.color) {
+        const colorIndex = getColorIndexByOrder(
+          Object.values(filteredData).map(p => p.name), 
+          dataPoint.name, 
+          colorPalette
+        );
+        const colors = COLOR_PALETTES[colorPalette] || HIGHCHARTS_DEFAULT_COLORS;
+        dataPoint.color = colors[colorIndex];
+        debugLog(enableDebugLogging, `🔍 DEBUG: Fallback color for ${dataPoint.name}: ${dataPoint.color}`);
       }
       
       data[i] = dataPoint;
@@ -708,9 +729,12 @@ function App() {
                   // Get the background color of this treemap segment
                   // Try multiple ways to get the color since it might be set differently in heatmap vs non-heatmap mode
                   const backgroundColor = this.point.color || this.color || this.series.color || '#FFFFFF';
-                  const textColor = getContrastColor(backgroundColor);
                   
-                  debugLog(enableDebugLogging, `🔍 DEBUG: Formatter - point: ${this.point.name}, area: ${area}, backgroundColor: ${backgroundColor}, textColor: ${textColor}`);
+                  // Ensure we have a valid color for contrast calculation
+                  const validBackgroundColor = backgroundColor && backgroundColor !== '#FFFFFF' ? backgroundColor : '#CCCCCC';
+                  const textColor = getContrastColor(validBackgroundColor, enableDebugLogging);
+                  
+                  debugLog(enableDebugLogging, `🔍 DEBUG: Formatter - point: ${this.point.name}, area: ${area}, backgroundColor: ${backgroundColor}, validBackgroundColor: ${validBackgroundColor}, textColor: ${textColor}`);
                   
                   if (showValues && this.point.value !== undefined) {
                     // Get the measure column ID for formatting
