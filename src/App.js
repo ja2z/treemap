@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import addTreemapModule from "highcharts/modules/treemap";
-import { client, useConfig, useElementData, useElementColumns, useVariable } from "@sigmacomputing/plugin";
+import { client, useConfig, useElementData, useElementColumns, useVariable, useActionTrigger } from "@sigmacomputing/plugin";
 //npm install highcharts highcharts-react-official
 import * as d3 from "d3";
 
@@ -283,6 +283,11 @@ client.config.configureEditorPanel([
     defaultValue: "value"
   },
   { name: "tileClickControl", type: "variable" },
+  {
+    type: "action-trigger",
+    name: "onClickAction",
+    label: "onClick",
+  },
 ]);
 
 addTreemapModule(Highcharts);
@@ -301,6 +306,7 @@ function App() {
   const colorPalette = client.config.getKey("colorPalette");
   const labelStyle = client.config.getKey("labelStyle");
   const [, setTileClickControlVar] = useVariable(config.tileClickControl); // Only setter, do not read value
+  const triggerOnClickAction = useActionTrigger(config.onClickAction);
   
   // Handle tile click to set control variable
   const handleTileClick = useCallback((tileName) => {
@@ -822,6 +828,12 @@ function App() {
                   canDrill = false;
                 }
                 
+                // Always trigger on click action if configured (fire first)
+                if (config.onClickAction) {
+                  debugLog(enableDebugLogging, '🖱️ Triggering onClick action for:', point.name);
+                  triggerOnClickAction();
+                }
+                
                 // If drilling is not possible and a control is configured, set the control value
                 if (!canDrill && hasTileClickControl) {
                   handleTileClick(point.name);
@@ -833,7 +845,7 @@ function App() {
       ],
     };
     return options;
-  }, [config, sigmaData, enableHeatmap, showValues, enableDebugLogging, labelFontSize, valueFontSize, colorPalette, labelStyle, drillState, hasTileClickControl, handleTileClick, columnInfo, setDrillStateWithLogging]);
+  }, [config, sigmaData, enableHeatmap, showValues, enableDebugLogging, labelFontSize, valueFontSize, colorPalette, labelStyle, drillState, hasTileClickControl, handleTileClick, triggerOnClickAction, columnInfo, setDrillStateWithLogging]);
 
   // Function to handle drill back
   const handleDrillBack = () => {
