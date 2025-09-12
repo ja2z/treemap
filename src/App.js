@@ -144,6 +144,7 @@ function hexToHsl(hex) {
       case r: h = (g - b) / d + (g < b ? 6 : 0); break;
       case g: h = (b - r) / d + 2; break;
       case b: h = (r - g) / d + 4; break;
+      default: break;
     }
     h /= 6;
   }
@@ -177,6 +178,7 @@ function getStateBaseColor(stateName, colorPalette = 'Highcharts Default', enabl
 }
 
 // Helper function to get the hex color that Highcharts would assign
+// eslint-disable-next-line no-unused-vars
 function getHighchartsColor(name, colorPalette = 'Highcharts Default') {
   const colorIndex = getColorIndex(name, colorPalette);
   const colors = COLOR_PALETTES[colorPalette] || HIGHCHARTS_DEFAULT_COLORS;
@@ -350,7 +352,7 @@ function App() {
   // Track when enableHeatmap changes
   useEffect(() => {
     debugLog(enableDebugLogging, '⚡ enableHeatmap changed to:', enableHeatmap, 'drillState at time of change:', drillState);
-  }, [enableHeatmap]);
+  }, [enableHeatmap, drillState, enableDebugLogging]);
   
   // Optional: Clear localStorage on component unmount (uncomment if needed)
   // useEffect(() => {
@@ -831,7 +833,7 @@ function App() {
       ],
     };
     return options;
-  }, [config, sigmaData, enableHeatmap, showValues, enableDebugLogging, labelFontSize, valueFontSize, colorPalette, labelStyle, drillState, hasTileClickControl, handleTileClick]);
+  }, [config, sigmaData, enableHeatmap, showValues, enableDebugLogging, labelFontSize, valueFontSize, colorPalette, labelStyle, drillState, hasTileClickControl, handleTileClick, columnInfo, setDrillStateWithLogging]);
 
   // Function to handle drill back
   const handleDrillBack = () => {
