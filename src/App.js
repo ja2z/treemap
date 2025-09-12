@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import addTreemapModule from "highcharts/modules/treemap";
@@ -303,14 +303,14 @@ function App() {
   const [, setTileClickControlVar] = useVariable(config.tileClickControl); // Only setter, do not read value
   
   // Handle tile click to set control variable
-  const handleTileClick = (tileName) => {
+  const handleTileClick = useCallback((tileName) => {
     debugLog(enableDebugLogging, '🖱️ Tile clicked:', tileName);
     if (config.tileClickControl) {
       debugLog(enableDebugLogging, '🖱️ Setting control variable to:', tileName);
       setTileClickControlVar(tileName);
       debugLog(enableDebugLogging, 'Tile clicked, setting control variable:', tileName);
     }
-  };
+  }, [config.tileClickControl, enableDebugLogging, setTileClickControlVar]);
   
   // Use localStorage to persist drill state across any component re-mounting
   const getInitialDrillState = () => {
@@ -333,7 +333,7 @@ function App() {
   const [drillState, setDrillState] = useState(getInitialDrillState);
   
   // Wrapper function to update drill state and persist to localStorage
-  const setDrillStateWithLogging = (newState) => {
+  const setDrillStateWithLogging = useCallback((newState) => {
     debugLog(enableDebugLogging, '🔧 setDrillState called with:', newState, 'from:', new Error().stack);
     setDrillState(newState);
     try {
@@ -342,7 +342,7 @@ function App() {
     } catch (e) {
       console.warn('Failed to save drill state to localStorage:', e);
     }
-  };
+  }, [enableDebugLogging]);
   
   debugLog(enableDebugLogging, '📱 Current drillState:', drillState);
   
