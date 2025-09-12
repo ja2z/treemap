@@ -725,9 +725,9 @@ function App() {
                       displayValue = formatNumberWithMask(this.point.value, columnInfo, measureColumnId);
                     }
                     
-                    return `<span style="font-size: ${labelFontSize}; font-weight: bold; color: ${textColor};">${this.point.name}</span><br/><span style="font-size: ${valueFontSize}; font-weight: normal; color: ${textColor};">${displayValue}</span>`;
+                    return `<span style="font-size: ${labelFontSize}; font-weight: bold; color: ${textColor}; text-shadow: none; -webkit-text-stroke: none;">${this.point.name}</span><br/><span style="font-size: ${valueFontSize}; font-weight: normal; color: ${textColor}; text-shadow: none; -webkit-text-stroke: none;">${displayValue}</span>`;
                   }
-                  return `<span style="color: ${textColor};">${this.point.name}</span>`;
+                  return `<span style="color: ${textColor}; text-shadow: none; -webkit-text-stroke: none;">${this.point.name}</span>`;
                 },
               },
             },
@@ -737,6 +737,11 @@ function App() {
           layoutAlgorithm: "squarified",
           dataLabels: {
             enabled: true,
+            style: {
+              textOutline: "none",
+              textShadow: "none",
+              WebkitTextStroke: "none"
+            }
           },
           data: data,
           point: {
