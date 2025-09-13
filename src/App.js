@@ -828,15 +828,15 @@ function App() {
                   canDrill = false;
                 }
                 
-                // Always trigger on click action if configured (fire first)
-                if (config.onClickAction) {
-                  debugLog(enableDebugLogging, '🖱️ Triggering onClick action for:', point.name);
-                  triggerOnClickAction();
-                }
-                
                 // If drilling is not possible and a control is configured, set the control value
                 if (!canDrill && hasTileClickControl) {
                   handleTileClick(point.name);
+                }
+                
+                // Always trigger on click action if configured
+                if (config.onClickAction) {
+                  debugLog(enableDebugLogging, '🖱️ Triggering onClick action for:', point.name);
+                  triggerOnClickAction();
                 }
               }
             }
